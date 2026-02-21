@@ -30,7 +30,7 @@ if COOKIES_ENV:
 # Lưu trữ tiến trình download
 download_progress = {}
 
-def get_yt_dlp_opts(use_cookies=False):
+def get_yt_dlp_opts(use_cookies=True):
     """Tạo options cơ bản cho yt-dlp"""
     opts = {
         'quiet': True,
@@ -42,7 +42,7 @@ def get_yt_dlp_opts(use_cookies=False):
         }
     }
     
-    # Chỉ dùng cookies khi cần thiết (video private, age-restricted)
+    # Dùng cookies để bypass bot detection trên server
     if use_cookies and COOKIES_FILE.exists():
         opts['cookiefile'] = str(COOKIES_FILE)
     
