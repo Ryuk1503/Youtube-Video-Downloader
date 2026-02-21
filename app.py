@@ -70,9 +70,15 @@ def get_video_info(url):
     
     ydl_opts = get_yt_dlp_opts()
     ydl_opts['extract_flat'] = False
+    ydl_opts['skip_download'] = True
+    ydl_opts['format'] = 'best'  # Chỉ cần format nào đó để lấy info
+    ydl_opts['ignoreerrors'] = True
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
+        
+        if not info:
+            raise Exception("Không thể lấy thông tin video")
         
         return {
             'title': info.get('title'),
@@ -127,8 +133,8 @@ def download_video(url, download_id, format_type='mp4', quality='320'):
         ydl_opts['progress_hooks'] = [lambda d: progress_hook(d, download_id)]
         
         if format_type == 'mp3':
-            # Download audio only
-            ydl_opts['format'] = 'bestaudio/best'
+            # Download audio only - với nhiều fallback
+            ydl_opts['format'] = 'bestaudio[ext=m4a]/bestaudio[ext=webm]/bestaudio/best'
             ydl_opts['postprocessors'] = [{
                 'key': 'FFmpegExtractAudio',
                 'preferredcodec': 'mp3',
@@ -137,9 +143,10 @@ def download_video(url, download_id, format_type='mp4', quality='320'):
             if FFMPEG_PATH:
                 ydl_opts['ffmpeg_location'] = FFMPEG_PATH
         else:
-            # Download video + audio with selected quality
+            # Download video + audio with selected quality - với nhiều fallback
             height = int(quality) if quality else 1440
-            ydl_opts['format'] = f'bestvideo[height<={height}]+bestaudio/best[height<={height}]/best'
+            # Format string với nhiều fallback options
+            ydl_opts['format'] = f'bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}]/best'
             ydl_opts['merge_output_format'] = 'mp4'
             ydl_opts['postprocessor_args'] = {
                 'merger': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
