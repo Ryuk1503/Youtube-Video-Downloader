@@ -18,8 +18,38 @@ FFMPEG_PATH = os.environ.get('FFMPEG_PATH', r"C:\Users\ADMIN\AppData\Local\Micro
 if os.environ.get('RENDER'):
     FFMPEG_PATH = None  # Render có sẵn FFmpeg trong PATH
 
+# Cookies file path
+COOKIES_FILE = Path("cookies.txt")
+
 # Lưu trữ tiến trình download
 download_progress = {}
+
+def get_yt_dlp_opts():
+    """Tạo options cơ bản cho yt-dlp với bypass bot detection"""
+    opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'socket_timeout': 30,
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'web'],
+                'player_skip': ['webpage', 'configs'],
+            }
+        },
+        'http_headers': {
+            'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-us,en;q=0.5',
+            'Sec-Fetch-Mode': 'navigate',
+        }
+    }
+    
+    # Sử dụng cookies nếu có
+    if COOKIES_FILE.exists():
+        opts['cookiefile'] = str(COOKIES_FILE)
+    
+    return opts
 
 def extract_video_id(url):
     """Trích xuất video ID từ URL YouTube"""
@@ -41,16 +71,8 @@ def get_video_info(url):
     if video_id:
         url = f"https://www.youtube.com/watch?v={video_id}"
     
-    ydl_opts = {
-        'quiet': True,
-        'no_warnings': True,
-        'extract_flat': False,
-        'noplaylist': True,  # Chỉ lấy video, không lấy playlist
-        'socket_timeout': 30,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        }
-    }
+    ydl_opts = get_yt_dlp_opts()
+    ydl_opts['extract_flat'] = False
     
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=False)
@@ -102,43 +124,28 @@ def download_video(url, download_id, format_type='mp4', quality='320'):
         
         output_path = DOWNLOAD_DIR / f"{download_id}.%(ext)s"
         
+        # Lấy base options
+        ydl_opts = get_yt_dlp_opts()
+        ydl_opts['outtmpl'] = str(output_path)
+        ydl_opts['progress_hooks'] = [lambda d: progress_hook(d, download_id)]
+        
         if format_type == 'mp3':
             # Download audio only
-            ydl_opts = {
-                'format': 'bestaudio/best',
-                'outtmpl': str(output_path),
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': str(quality),
-                }],
-                'progress_hooks': [lambda d: progress_hook(d, download_id)],
-                'quiet': True,
-                'no_warnings': True,
-                'noplaylist': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                }
-            }
+            ydl_opts['format'] = 'bestaudio/best'
+            ydl_opts['postprocessors'] = [{
+                'key': 'FFmpegExtractAudio',
+                'preferredcodec': 'mp3',
+                'preferredquality': str(quality),
+            }]
             if FFMPEG_PATH:
                 ydl_opts['ffmpeg_location'] = FFMPEG_PATH
         else:
             # Download video + audio with selected quality
             height = int(quality) if quality else 1440
-            ydl_opts = {
-                'format': f'bestvideo[height<={height}]+bestaudio/best[height<={height}]/best',
-                'outtmpl': str(output_path),
-                'merge_output_format': 'mp4',
-                'postprocessor_args': {
-                    'merger': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
-                },
-                'progress_hooks': [lambda d: progress_hook(d, download_id)],
-                'quiet': True,
-                'no_warnings': True,
-                'noplaylist': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                }
+            ydl_opts['format'] = f'bestvideo[height<={height}]+bestaudio/best[height<={height}]/best'
+            ydl_opts['merge_output_format'] = 'mp4'
+            ydl_opts['postprocessor_args'] = {
+                'merger': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
             }
             if FFMPEG_PATH:
                 ydl_opts['ffmpeg_location'] = FFMPEG_PATH
