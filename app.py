@@ -7,6 +7,8 @@ import time
 import re
 from pathlib import Path
 
+import base64
+
 app = Flask(__name__)
 
 # Thư mục lưu video tạm
@@ -22,10 +24,24 @@ if os.environ.get('RENDER'):
 COOKIES_FILE = Path("cookies.txt")
 
 # Tạo cookies.txt từ environment variable nếu có (dùng cho Render)
+# Hỗ trợ cả plain text và base64 encoded
 COOKIES_ENV = os.environ.get('YOUTUBE_COOKIES')
-if COOKIES_ENV:
+COOKIES_BASE64 = os.environ.get('YOUTUBE_COOKIES_BASE64')
+
+if COOKIES_BASE64:
+    try:
+        cookies_content = base64.b64decode(COOKIES_BASE64).decode('utf-8')
+        with open(COOKIES_FILE, 'w', encoding='utf-8', newline='\n') as f:
+            f.write(cookies_content)
+        print(f"[INFO] Loaded cookies from base64 ({len(cookies_content)} bytes)")
+    except Exception as e:
+        print(f"[ERROR] Failed to decode base64 cookies: {e}")
+elif COOKIES_ENV:
+    # Xử lý escape sequences và đảm bảo newlines đúng
+    cookies_content = COOKIES_ENV.replace('\\n', '\n').replace('\\t', '\t')
     with open(COOKIES_FILE, 'w', encoding='utf-8', newline='\n') as f:
-        f.write(COOKIES_ENV)
+        f.write(cookies_content)
+    print(f"[INFO] Loaded cookies from environment variable ({len(cookies_content)} bytes)")
 
 # Lưu trữ tiến trình download
 download_progress = {}
@@ -33,8 +49,8 @@ download_progress = {}
 def get_yt_dlp_opts(use_cookies=True):
     """Tạo options cơ bản cho yt-dlp"""
     opts = {
-        'quiet': True,
-        'no_warnings': True,
+        'quiet': False,  # Bật log để debug
+        'no_warnings': False,
         'noplaylist': True,
         'socket_timeout': 30,
         'http_headers': {
@@ -71,23 +87,26 @@ def get_video_info(url):
     ydl_opts = get_yt_dlp_opts()
     ydl_opts['extract_flat'] = False
     ydl_opts['skip_download'] = True
-    ydl_opts['format'] = 'best'  # Chỉ cần format nào đó để lấy info
-    ydl_opts['ignoreerrors'] = True
+    # Không chỉ định format khi chỉ lấy info
     
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        
-        if not info:
-            raise Exception("Không thể lấy thông tin video")
-        
-        return {
-            'title': info.get('title'),
-            'thumbnail': info.get('thumbnail'),
-            'duration': info.get('duration'),
-            'channel': info.get('channel') or info.get('uploader'),
-            'id': info.get('id'),
-            'url': url
-        }
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            
+            if not info:
+                raise Exception("Không thể lấy thông tin video")
+            
+            return {
+                'title': info.get('title'),
+                'thumbnail': info.get('thumbnail'),
+                'duration': info.get('duration'),
+                'channel': info.get('channel') or info.get('uploader'),
+                'id': info.get('id'),
+                'url': url
+            }
+    except Exception as e:
+        print(f"[ERROR] get_video_info failed: {str(e)}")
+        raise
 
 def progress_hook(d, download_id):
     """Callback để cập nhật tiến trình"""
