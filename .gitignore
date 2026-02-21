@@ -24,3 +24,6 @@ Thumbs.db
 # Env
 .env
 *.env
+
+# Cookies (sensitive)
+cookies.txt
