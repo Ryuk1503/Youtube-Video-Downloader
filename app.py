@@ -21,27 +21,24 @@ if os.environ.get('RENDER'):
 # Cookies file path
 COOKIES_FILE = Path("cookies.txt")
 
+# Tạo cookies.txt từ environment variable nếu có (dùng cho Render)
+COOKIES_ENV = os.environ.get('YOUTUBE_COOKIES')
+if COOKIES_ENV:
+    with open(COOKIES_FILE, 'w', encoding='utf-8', newline='\n') as f:
+        f.write(COOKIES_ENV)
+
 # Lưu trữ tiến trình download
 download_progress = {}
 
 def get_yt_dlp_opts():
-    """Tạo options cơ bản cho yt-dlp với bypass bot detection"""
+    """Tạo options cơ bản cho yt-dlp"""
     opts = {
         'quiet': True,
         'no_warnings': True,
         'noplaylist': True,
         'socket_timeout': 30,
-        'extractor_args': {
-            'youtube': {
-                'player_client': ['android', 'web'],
-                'player_skip': ['webpage', 'configs'],
-            }
-        },
         'http_headers': {
-            'User-Agent': 'com.google.android.youtube/17.36.4 (Linux; U; Android 12; GB) gzip',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-            'Accept-Language': 'en-us,en;q=0.5',
-            'Sec-Fetch-Mode': 'navigate',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
         }
     }
     
