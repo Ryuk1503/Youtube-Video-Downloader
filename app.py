@@ -183,10 +183,11 @@ def download_video(url, download_id, format_type='mp4', quality='320'):
             if FFMPEG_PATH:
                 ydl_opts['ffmpeg_location'] = FFMPEG_PATH
         else:
-            # Download video + audio with selected quality - với nhiều fallback
+            # Download video + audio with selected quality
+            # Ưu tiên H.264 (avc1) codec thay vì VP9 để tương thích tốt hơn
             height = int(quality) if quality else 1440
-            # Format string với nhiều fallback options
-            ydl_opts['format'] = f'bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={height}]+bestaudio/best[height<={height}]/best'
+            # Format: ưu tiên avc1 (H.264) -> mp4 -> fallback
+            ydl_opts['format'] = f'bestvideo[height<={height}][vcodec^=avc1]+bestaudio[ext=m4a]/bestvideo[height<={height}][vcodec^=avc1]+bestaudio/bestvideo[height<={height}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={height}]+bestaudio/best'
             ydl_opts['merge_output_format'] = 'mp4'
             ydl_opts['postprocessor_args'] = {
                 'merger': ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '192k']
