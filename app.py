@@ -84,10 +84,23 @@ def get_video_info(url):
     if video_id:
         url = f"https://www.youtube.com/watch?v={video_id}"
     
-    ydl_opts = get_yt_dlp_opts()
-    ydl_opts['extract_flat'] = False
-    ydl_opts['skip_download'] = True
-    # Không chỉ định format khi chỉ lấy info
+    # Options riêng cho việc lấy info - không cần download hay chọn format
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'socket_timeout': 30,
+        'skip_download': True,
+        'extract_flat': False,
+        'simulate': True,  # Chỉ simulate, không download
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        }
+    }
+    
+    # Dùng cookies nếu có
+    if COOKIES_FILE.exists():
+        ydl_opts['cookiefile'] = str(COOKIES_FILE)
     
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
