@@ -55,7 +55,11 @@ def get_yt_dlp_opts(use_cookies=True):
         'socket_timeout': 30,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        }
+        },
+        # Cấu hình JavaScript runtime để giải mã signature YouTube
+        'js_runtimes': {'node': {}},
+        # Cho phép tải remote EJS components từ GitHub
+        'remote_components': ['ejs:github'],
     }
     
     # Dùng cookies để bypass bot detection trên server
@@ -95,7 +99,11 @@ def get_video_info(url):
         'simulate': True,  # Chỉ simulate, không download
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        }
+        },
+        # Cấu hình JavaScript runtime để giải mã signature YouTube
+        'js_runtimes': {'node': {}},
+        # Cho phép tải remote EJS components từ GitHub
+        'remote_components': ['ejs:github'],
     }
     
     # Dùng cookies nếu có
